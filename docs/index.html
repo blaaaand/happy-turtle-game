@@ -36,11 +36,26 @@
             color: white;
             font-size: 24px;
         }
+        .tutorial {
+            position: absolute;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="score">Score: 0</div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="tutorial" id="tutorialOverlay">
+        <p>Help the turtle jump over obstacles!</p>
+        <p>Click or tap anywhere to make the turtle jump!</p>
+        <p>Try to get the highest score!</p>
+        <button onclick="startGame()">Start Game!</button>
+    </div>
     <div class="game-over">
         <h2 id="game-over-message"></h2>
         <p id="score-display"></p>
@@ -64,6 +79,7 @@
         let gameTimer;
         let turtle;
         let obstacles = [];
+        let deltaTime = 0;
 
         class Turtle {
             constructor() {
@@ -71,16 +87,64 @@
                 this.y = 300;
                 this.width = 50;
                 this.height = 50;
-                this.speed = 0;
-                this.gravity = 0.3;
-                this.jumpForce = -6;
+                this.ySpeed = 0;
+                this.gravity = 0.3; // More floaty gravity
+                this.jumpPower = -6; // More powerful jumps
+                this.jumpCooldown = 0;
+                this.jumpCooldownTime = 150; // 150ms cooldown between jumps
+            }
+
+            jump() {
+                // Only allow jumping if not in cooldown
+                if (this.jumpCooldown <= 0) {
+                    this.ySpeed = this.jumpPower;
+                    this.jumpCooldown = this.jumpCooldownTime;
+                }
+            }
+
+            update() {
+                // Apply gravity
+                this.ySpeed += this.gravity;
+                this.y += this.ySpeed;
+
+                // Apply jump cooldown
+                if (this.jumpCooldown > 0) {
+                    this.jumpCooldown -= deltaTime;
+                }
+
+                // Keep turtle within bounds
+                if (this.y > canvas.height - this.height - 80) {
+                    this.y = canvas.height - this.height - 80;
+                    this.ySpeed = 0;
+                    this.jumpCooldown = 0; // Reset cooldown on ground
+                }
+                if (this.y < 0) {
+                    this.y = 0;
+                    this.ySpeed = 0;
+                }
+
+                // Add a small upward force when near the ground
+                // This makes the turtle feel more floaty and easier to control
+                if (this.y > canvas.height - this.height - 100) {
+                    this.ySpeed -= 0.05;
+                }
             }
 
             draw() {
-                // Draw head first (bottom layer)
+                // Draw shell
+                ctx.fillStyle = '#644000';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y - 15, 30, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw body
                 ctx.fillStyle = '#00FF00';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Draw head
                 ctx.beginPath();
                 ctx.arc(this.x + 62, this.y + 5, 10, 0, Math.PI * 2);
+                ctx.fillStyle = '#00FF00';
                 ctx.fill();
                 
                 // Draw eyes
@@ -94,13 +158,7 @@
                 ctx.arc(this.x + 62, this.y + 5, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw shell (top layer)
-                ctx.fillStyle = '#644000';
-                ctx.beginPath();
-                ctx.ellipse(this.x - 5, this.y - 15, 60, 30);
-                ctx.fill();
-                
-                // Draw legs (bottom layer)
+                // Draw legs
                 ctx.fillStyle = '#00FF00';
                 ctx.beginPath();
                 ctx.arc(this.x + 10, this.y + 15, 6, 0, Math.PI * 2);
@@ -109,18 +167,13 @@
                 ctx.beginPath();
                 ctx.arc(this.x + 40, this.y + 15, 6, 0, Math.PI * 2);
                 ctx.fill();
-            }
 
-            jump() {
-                this.speed = this.jumpForce;
-            }
-
-            update() {
-                this.speed += this.gravity;
-                this.y += this.speed;
-
-                // Boundaries
-                if (this.y > 520) {
+                // Draw a small indicator when ready to jump
+                if (this.jumpCooldown <= 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(this.x + 25, this.y + 10, 5, 0, Math.PI * 2);
+                    ctx.fill();
                     this.y = 520;
                     this.speed = 0;
                 } else if (this.y < 0) {
@@ -255,14 +308,24 @@
         }
 
         function startGame() {
+            // Remove tutorial overlay
+            const tutorial = document.getElementById('tutorialOverlay');
+            if (tutorial) {
+                tutorial.remove();
+            }
+            
+            // Reset game state
+            state.current = 'countdown';
             score = 0;
-            gameActive = true;
             turtle = new Turtle();
             obstacles = [];
+            gameActive = true;
             
             // Start countdown
-            countdown = 3;
-            countdownTimer = setInterval(() => {
+            let countdownTime = 3;
+            let countdownTimer = setInterval(() => {
+                countdownTime--;
+                if (countdownTime <= 0) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = 'white';
                 ctx.font = '120px Arial';
@@ -279,35 +342,51 @@
         function gameLoop() {
             if (!gameActive) return;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw ocean floor
+            // Calculate delta time for smooth animation
+            const now = Date.now();
+            deltaTime = now - lastTime;
+            lastTime = now;
+
+            // Clear canvas
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw ground
             ctx.fillStyle = '#9664C8';
             ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
 
-            // Draw turtle
-            turtle.update();
-            turtle.draw();
+            // Draw score
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '36px Arial';
+            ctx.fillText(`Score: ${score}`, 20, 40);
+            ctx.beginPath();
+            ctx.arc(this.x + 20, this.y - 30, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(this.x + 60, this.y - 30, 12, 0, Math.PI * 2);
+            ctx.fill();
 
-            // Update and draw obstacles
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].update();
-                obstacles[i].draw();
-                
-                if (obstacles[i].collidesWith(turtle)) {
-                    gameOver();
-                    return;
-                }
-                
-                if (obstacles[i].x < -obstacles[i].width) {
-                    obstacles.splice(i, 1);
-                }
-            }
+            // Top circles
+            ctx.beginPath();
+            ctx.arc(this.x + 20, this.y - 60, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(this.x + 60, this.y - 60, 10, 0, Math.PI * 2);
+            ctx.fill();
 
-            // Create new obstacles
-            if (Math.random() < 0.02) {
-                createObstacle();
-            }
+            // Smaller top circles
+            ctx.beginPath();
+            ctx.arc(this.x + 20, this.y - 80, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(this.x + 60, this.y - 80, 8, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'jellyfish') {
+            // Draw jellyfish body
+            ctx.fillStyle = '#808080';
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y, 30, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
 
             // Update score
             score++;
