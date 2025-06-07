@@ -2,74 +2,305 @@
 <html>
 <head>
     <title>Happy Turtle Game</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <style>
-        body {
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             background-color: #87CEEB;
+            font-family: Arial, sans-serif;
         }
         canvas {
             border: 2px solid #000;
+            background-color: #87CEEB;
+        }
+        .game-over {
+            position: absolute;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 24px;
         }
     </style>
 </head>
 <body>
+    <div class="score">Score: 0</div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <script type="text/javascript">
-        let pyodideReady = false;
-        let pyodide = null;
+    <div class="game-over">
+        <h2 id="game-over-message"></h2>
+        <p id="score-display"></p>
+        <p id="high-score-display"></p>
+        <p>Click to Retry</p>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.querySelector('.score');
+        const gameOverDiv = document.querySelector('.game-over');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const scoreDisplay = document.getElementById('score-display');
+        const highScoreDisplay = document.getElementById('high-score-display');
 
-        async function loadPyodide() {
-            pyodide = await loadPyodide({
-                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/"
-            });
-            pyodideReady = true;
-            await pyodide.loadPackage("micropip");
-            await pyodide.runPythonAsync(`
-                import micropip
-                await micropip.install("pygame")
-            `);
-            startGame();
-        }
+        let score = 0;
+        let highScore = localStorage.getItem('happyTurtleHighScore') || 0;
+        let gameActive = false;
+        let countdown = 3;
+        let countdownTimer;
+        let gameTimer;
+        let turtle;
+        let obstacles = [];
 
-        function startGame() {
-            if (pyodideReady) {
-                pyodide.runPython(`
-                    import pygame
-                    import sys
-                    import time
-                    import random
-                    import os
-                    import json
+        class Turtle {
+            constructor() {
+                this.x = 100;
+                this.y = 300;
+                this.width = 50;
+                this.height = 50;
+                this.speed = 0;
+                this.gravity = 0.3;
+                this.jumpForce = -6;
+            }
 
-                    # Initialize Pygame
-                    pygame.init()
-                    
-                    # Get the canvas
-                    canvas = pyodide.globals.get("document").querySelector("#gameCanvas")
-                    screen = pygame.display.set_mode((800, 600))
-                    
-                    # Main game loop
-                    running = True
-                    while running:
-                        for event in pygame.event.get():
-                            if event.type == pygame.QUIT:
-                                running = False
-                        
-                        # Fill the screen
-                        screen.fill((135, 206, 235))
-                        
-                        # Update display
-                        pygame.display.flip()
-                `);
+            draw() {
+                // Draw shell
+                ctx.fillStyle = '#644000';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y - 15, 30, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw body
+                ctx.fillStyle = '#00FF00';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Draw head
+                ctx.beginPath();
+                ctx.arc(this.x + 62, this.y + 5, 10, 0, Math.PI * 2);
+                ctx.fillStyle = '#00FF00';
+                ctx.fill();
+                
+                // Draw eyes
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(this.x + 62, this.y + 5, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(this.x + 62, this.y + 5, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw legs
+                ctx.fillStyle = '#00FF00';
+                ctx.beginPath();
+                ctx.arc(this.x + 10, this.y + 15, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(this.x + 40, this.y + 15, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            jump() {
+                this.speed = this.jumpForce;
+            }
+
+            update() {
+                this.speed += this.gravity;
+                this.y += this.speed;
+
+                // Boundaries
+                if (this.y > 520) {
+                    this.y = 520;
+                    this.speed = 0;
+                } else if (this.y < 0) {
+                    this.y = 0;
+                    this.speed = 0;
+                }
+            }
+
+            reset() {
+                this.y = 300;
+                this.speed = 0;
             }
         }
 
-        loadPyodide();
+        class Obstacle {
+            constructor(type) {
+                this.x = canvas.width;
+                this.y = Math.random() * 400 + 100;
+                this.width = 50;
+                this.height = 30;
+                this.type = type;
+                this.speed = 2;
+            }
+
+            draw() {
+                ctx.fillStyle = '#9664C8';
+                
+                if (this.type === 'coral') {
+                    ctx.beginPath();
+                    ctx.arc(this.x + 20, this.y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.arc(this.x + 60, this.y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'jellyfish') {
+                    ctx.fillStyle = '#808080';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x, this.y, 30, 20, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 15, this.y + 20);
+                    ctx.lineTo(this.x + 15, this.y + 60);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 45, this.y + 20);
+                    ctx.lineTo(this.x + 45, this.y + 60);
+                    ctx.stroke();
+                }
+            }
+
+            update() {
+                this.x -= this.speed;
+                return this.x < -this.width;
+            }
+
+            collidesWith(turtle) {
+                return (this.x < turtle.x + turtle.width &&
+                    this.x + this.width > turtle.x &&
+                    this.y < turtle.y + turtle.height &&
+                    this.y + this.height > turtle.y);
+            }
+        }
+
+        function createObstacle() {
+            const types = ['coral', 'jellyfish'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            obstacles.push(new Obstacle(type));
+        }
+
+        function startGame() {
+            score = 0;
+            gameActive = true;
+            turtle = new Turtle();
+            obstacles = [];
+            
+            // Start countdown
+            countdown = 3;
+            countdownTimer = setInterval(() => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '120px Arial';
+                ctx.fillText(countdown, canvas.width/2 - 30, canvas.height/2);
+                countdown--;
+                if (countdown < 0) {
+                    clearInterval(countdownTimer);
+                    gameTimer = setInterval(gameLoop, 1000/60);
+                    createObstacle();
+                }
+            }, 1000);
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ocean floor
+            ctx.fillStyle = '#9664C8';
+            ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+
+            // Draw turtle
+            turtle.update();
+            turtle.draw();
+
+            // Update and draw obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+                obstacles[i].draw();
+                
+                if (obstacles[i].collidesWith(turtle)) {
+                    gameOver();
+                    return;
+                }
+                
+                if (obstacles[i].x < -obstacles[i].width) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Create new obstacles
+            if (Math.random() < 0.02) {
+                createObstacle();
+            }
+
+            // Update score
+            score++;
+            scoreElement.textContent = `Score: ${score}`;
+
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('happyTurtleHighScore', highScore);
+            }
+        }
+
+        function gameOver() {
+            gameActive = false;
+            clearInterval(gameTimer);
+            clearInterval(countdownTimer);
+
+            // Show game over message
+            gameOverDiv.style.display = 'block';
+            
+            // Set game over message based on score
+            if (score < 50) {
+                gameOverMessage.textContent = "Better luck next time!";
+            } else if (score < 200) {
+                gameOverMessage.textContent = "You're getting the hang of it!";
+            } else if (score < 500) {
+                gameOverMessage.textContent = "You're a turtle pro!";
+            } else if (score < 1000) {
+                gameOverMessage.textContent = "You're swimming like a champ!";
+            } else if (score < 2000) {
+                gameOverMessage.textContent = "You're a sea legend!";
+            } else if (score < 3000) {
+                gameOverMessage.textContent = "You're a master of the waves!";
+            } else {
+                gameOverMessage.textContent = "You're the ocean's greatest explorer!";
+            }
+
+            scoreDisplay.textContent = `Score: ${score}`;
+            highScoreDisplay.textContent = `High Score: ${highScore}`;
+        }
+
+        // Event listeners
+        document.addEventListener('click', () => {
+            if (!gameActive) {
+                startGame();
+                gameOverDiv.style.display = 'none';
+            } else {
+                turtle.jump();
+            }
+        });
+
+        // Start the game
+        startGame();
     </script>
 </body>
 </html>
