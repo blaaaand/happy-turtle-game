@@ -77,20 +77,10 @@
             }
 
             draw() {
-                // Draw shell
-                ctx.fillStyle = '#644000';
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y - 15, 30, 15, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw body
+                // Draw head first (bottom layer)
                 ctx.fillStyle = '#00FF00';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                
-                // Draw head
                 ctx.beginPath();
                 ctx.arc(this.x + 62, this.y + 5, 10, 0, Math.PI * 2);
-                ctx.fillStyle = '#00FF00';
                 ctx.fill();
                 
                 // Draw eyes
@@ -104,7 +94,13 @@
                 ctx.arc(this.x + 62, this.y + 5, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw legs
+                // Draw shell (top layer)
+                ctx.fillStyle = '#644000';
+                ctx.beginPath();
+                ctx.ellipse(this.x - 5, this.y - 15, 60, 30);
+                ctx.fill();
+                
+                // Draw legs (bottom layer)
                 ctx.fillStyle = '#00FF00';
                 ctx.beginPath();
                 ctx.arc(this.x + 10, this.y + 15, 6, 0, Math.PI * 2);
@@ -143,35 +139,99 @@
             constructor(type) {
                 this.x = canvas.width;
                 this.y = Math.random() * 400 + 100;
-                this.width = 50;
-                this.height = 30;
                 this.type = type;
                 this.speed = 2;
+                
+                // Set size based on type
+                if (this.type === 'coral') {
+                    this.width = 100;
+                    this.height = 50;
+                } else if (this.type === 'jellyfish') {
+                    this.width = 50;
+                    this.height = 30;
+                } else if (this.type === 'shark') {
+                    this.width = 80;
+                    this.height = 40;
+                }
             }
 
             draw() {
-                ctx.fillStyle = '#9664C8';
-                
                 if (this.type === 'coral') {
+                    // Draw coral as stacked circles
+                    // Base circles
+                    ctx.fillStyle = '#9664C8';
                     ctx.beginPath();
                     ctx.arc(this.x + 20, this.y, 15, 0, Math.PI * 2);
                     ctx.fill();
+                    ctx.beginPath();
                     ctx.arc(this.x + 60, this.y, 15, 0, Math.PI * 2);
                     ctx.fill();
+                    
+                    // Middle circles
+                    ctx.beginPath();
+                    ctx.arc(this.x + 20, this.y - 30, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(this.x + 60, this.y - 30, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Top circles
+                    ctx.beginPath();
+                    ctx.arc(this.x + 20, this.y - 60, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(this.x + 60, this.y - 60, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Smaller top circles
+                    ctx.beginPath();
+                    ctx.arc(this.x + 20, this.y - 80, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(this.x + 60, this.y - 80, 8, 0, Math.PI * 2);
+                    ctx.fill();
                 } else if (this.type === 'jellyfish') {
+                    // Draw jellyfish body
                     ctx.fillStyle = '#808080';
                     ctx.beginPath();
                     ctx.ellipse(this.x, this.y, 30, 20, 0, 0, Math.PI * 2);
                     ctx.fill();
                     
+                    // Draw jellyfish tentacles
+                    for (let i = 0; i < 4; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + 15 + i * 15, this.y + 40);
+                        ctx.lineTo(this.x + 15 + i * 15, this.y + 80);
+                        ctx.strokeStyle = '#808080';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                    
+                    // Draw jellyfish eyes
+                    ctx.fillStyle = '#FFFFFF';
                     ctx.beginPath();
-                    ctx.moveTo(this.x + 15, this.y + 20);
-                    ctx.lineTo(this.x + 15, this.y + 60);
-                    ctx.stroke();
+                    ctx.arc(this.x + 20, this.y + 20, 3, 0, Math.PI * 2);
+                    ctx.fill();
                     ctx.beginPath();
-                    ctx.moveTo(this.x + 45, this.y + 20);
-                    ctx.lineTo(this.x + 45, this.y + 60);
-                    ctx.stroke();
+                    ctx.arc(this.x + 40, this.y + 20, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'shark') {
+                    // Draw stingray body
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + 20);
+                    ctx.lineTo(this.x + 100, this.y + 20);
+                    ctx.lineTo(this.x + 50, this.y);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Draw stingray tail
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 100, this.y + 20);
+                    ctx.lineTo(this.x + 120, this.y + 10);
+                    ctx.lineTo(this.x + 120, this.y + 30);
+                    ctx.closePath();
+                    ctx.fill();
                 }
             }
 
