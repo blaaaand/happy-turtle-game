@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Happy Turtle Game</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #87CEEB;
+        }
+        canvas {
+            border: 2px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script type="text/javascript">
+        let pyodideReady = false;
+        let pyodide = null;
+
+        async function loadPyodide() {
+            pyodide = await loadPyodide({
+                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/"
+            });
+            pyodideReady = true;
+            await pyodide.loadPackage("micropip");
+            await pyodide.runPythonAsync(`
+                import micropip
+                await micropip.install("pygame")
+            `);
+            startGame();
+        }
+
+        function startGame() {
+            if (pyodideReady) {
+                pyodide.runPython(`
+                    import pygame
+                    import sys
+                    import time
+                    import random
+                    import os
+                    import json
+
+                    # Initialize Pygame
+                    pygame.init()
+                    
+                    # Get the canvas
+                    canvas = pyodide.globals.get("document").querySelector("#gameCanvas")
+                    screen = pygame.display.set_mode((800, 600))
+                    
+                    # Main game loop
+                    running = True
+                    while running:
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                running = False
+                        
+                        # Fill the screen
+                        screen.fill((135, 206, 235))
+                        
+                        # Update display
+                        pygame.display.flip()
+                `);
+            }
+        }
+
+        loadPyodide();
+    </script>
+</body>
+</html>
