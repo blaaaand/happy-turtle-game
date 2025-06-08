@@ -365,13 +365,16 @@ class Button:
         self.font = pygame.font.Font(None, 36)
     
     def draw(self, screen):
-        # Draw button background
-        pygame.draw.rect(screen, (150, 150, 150), self.rect)
+        # Draw button background with rounded corners
+        pygame.draw.rect(screen, (150, 100, 200), self.rect)  # Purple background
         
-        # Draw text
-        text = self.font.render(self.text, True, (0, 0, 0))
-        text_rect = text.get_rect(center=self.rect.center)
-        screen.blit(text, text_rect)
+        # Draw white border
+        pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
+        
+        # Draw button text
+        text_surface = self.font.render(self.text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        screen.blit(text_surface, text_rect)
     
     def check_click(self, pos):
         return self.rect.collidepoint(pos)
