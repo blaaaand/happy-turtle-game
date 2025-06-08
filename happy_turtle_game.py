@@ -97,10 +97,25 @@ class Turtle:
         self.gravity = 0.3  # More floaty gravity for kids
         self.is_alive = True
         self.jump_height = -6  # More floaty jump
+        self.head_x_offset = 0  # For head wiggling animation
+        self.head_wiggle_timer = 0
+        self.head_wiggle_direction = 1  # 1 for right, -1 for left
         
     def update(self):
         self.y_speed += self.gravity
         self.rect.y += self.y_speed
+        
+        # Update head wiggle animation
+        if self.y_speed < 0:  # Only wiggle when jumping
+            self.head_wiggle_timer += 1
+            if self.head_wiggle_timer >= 10:  # Change direction every 10 frames
+                self.head_wiggle_direction *= -1
+                self.head_wiggle_timer = 0
+            self.head_x_offset = self.head_wiggle_direction * 2  # Small wiggle offset
+        else:
+            self.head_x_offset = 0  # Reset when not jumping
+            self.head_wiggle_timer = 0
+            self.head_wiggle_direction = 1
         
         # Check collision with screen edges
         if self.rect.y >= 520:  # Bottom edge
@@ -121,12 +136,19 @@ class Turtle:
         self.rect.y = 300
         self.y_speed = 0
         self.is_alive = True
+        self.head_x_offset = 0
+        self.head_wiggle_timer = 0
+        self.head_wiggle_direction = 1
     
     def draw(self, screen):
+        # Calculate head position with wiggle
+        head_x = self.rect.x + 62 + self.head_x_offset
+        head_y = self.rect.y + 5
+        
         # Draw head first (bottom layer)
-        pygame.draw.circle(screen, (0, 255, 0), (self.rect.x + 62, self.rect.y + 5), 10)  # Head
-        pygame.draw.circle(screen, (255, 255, 255), (self.rect.x + 62, self.rect.y + 5), 3)  # White eye
-        pygame.draw.circle(screen, (0, 0, 0), (self.rect.x + 62, self.rect.y + 5), 1)  # Black pupil
+        pygame.draw.circle(screen, (0, 255, 0), (head_x, head_y), 10)  # Head
+        pygame.draw.circle(screen, (255, 255, 255), (head_x, head_y), 3)  # White eye
+        pygame.draw.circle(screen, (0, 0, 0), (head_x, head_y), 1)  # Black pupil
         
         # Draw shell (top layer)
         pygame.draw.ellipse(screen, (100, 60, 0), (self.rect.x - 5, self.rect.y - 15, 60, 30))  # Shell
@@ -140,6 +162,15 @@ class Obstacle:
         self.x = x
         self.y = y
         self.type = type
+        self.float_timer = 0  # For jellyfish floating animation
+        self.float_direction = 1  # 1 for up, -1 for down
+        self.float_offset = 0  # Current float position offset
+        self.tail_wag_timer = 0  # For shark tail wag animation
+        self.tail_wag_direction = 1  # 1 for right, -1 for left
+        self.tail_wag_offset = 0  # Current tail wag position offset
+        self.coral_sway_timer = 0  # For coral swaying animation
+        self.coral_sway_direction = 1  # 1 for right, -1 for left
+        self.coral_sway_offset = 0  # Current coral sway position offset
         
         # Create rect for collision detection
         if self.type == "coral":
@@ -152,46 +183,80 @@ class Obstacle:
     def update(self, speed):
         self.x -= speed  # Move obstacle left at specified speed
         self.rect.x = self.x  # Update rect position
+        
+        # Update jellyfish floating animation
+        if self.type == "jellyfish":
+            self.float_timer += 1
+            if self.float_timer >= 10:  # Change direction every 10 frames
+                self.float_direction *= -1
+                self.float_timer = 0
+            self.float_offset = self.float_direction * 2  # Small float offset
+            self.rect.y = self.y + self.float_offset  # Update rect position with float offset
+        
+        # Update shark tail wag animation
+        if self.type == "shark":
+            self.tail_wag_timer += 1
+            if self.tail_wag_timer >= 5:  # Change direction every 5 frames for faster wag
+                self.tail_wag_direction *= -1
+                self.tail_wag_timer = 0
+            self.tail_wag_offset = self.tail_wag_direction * 3  # Slightly larger wag offset
+        
+        # Update coral swaying animation
+        if self.type == "coral":
+            self.coral_sway_timer += 1
+            if self.coral_sway_timer >= 15:  # Change direction every 15 frames for slower sway
+                self.coral_sway_direction *= -1
+                self.coral_sway_timer = 0
+            self.coral_sway_offset = self.coral_sway_direction * 2  # Gentle sway offset
             
     def draw(self, screen):
         if self.type == "coral":
-            # Draw coral as stacked circles
+            # Draw coral with swaying animation
+            coral_sway_x = self.x + self.coral_sway_offset
+            
+            # Draw coral as stacked circles with sway
             # Base circles
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 20, self.y), 15)
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 60, self.y), 15)
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 20, self.y), 15)
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 60, self.y), 15)
             
-            # Middle circles
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 20, self.y - 30), 12)
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 60, self.y - 30), 12)
+            # Middle circles with sway
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 20, self.y - 30), 12)
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 60, self.y - 30), 12)
             
-            # Top circles
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 20, self.y - 60), 10)
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 60, self.y - 60), 10)
+            # Top circles with sway
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 20, self.y - 60), 10)
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 60, self.y - 60), 10)
             
-            # Smaller top circles
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 20, self.y - 80), 8)
-            pygame.draw.circle(screen, (150, 100, 200), (self.x + 60, self.y - 80), 8)
+            # Smaller top circles with sway
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 20, self.y - 80), 8)
+            pygame.draw.circle(screen, (150, 100, 200), (coral_sway_x + 60, self.y - 80), 8)
         elif self.type == "jellyfish":
-            # Draw jellyfish body
-            pygame.draw.ellipse(screen, (128, 128, 128), (self.x, self.y, 60, 40))
+            # Draw jellyfish with float animation
+            float_y = self.y + self.float_offset
             
-            # Draw jellyfish tentacles
+            # Draw jellyfish body
+            pygame.draw.ellipse(screen, (128, 128, 128), (self.x, float_y, 60, 40))
+            
+            # Draw jellyfish tentacles with float animation
             for i in range(4):
                 pygame.draw.line(screen, (128, 128, 128), 
-                              (self.x + 15 + i*15, self.y + 40),
-                              (self.x + 15 + i*15, self.y + 80),
+                              (self.x + 15 + i*15, float_y + 40),
+                              (self.x + 15 + i*15, float_y + 80),
                               2)
             
-            # Draw jellyfish eyes
-            pygame.draw.circle(screen, (255, 255, 255), (self.x + 20, self.y + 20), 3)
-            pygame.draw.circle(screen, (255, 255, 255), (self.x + 40, self.y + 20), 3)
+            # Draw jellyfish eyes with float animation
+            pygame.draw.circle(screen, (255, 255, 255), (self.x + 20, float_y + 20), 3)
+            pygame.draw.circle(screen, (255, 255, 255), (self.x + 40, float_y + 20), 3)
             
         elif self.type == "shark":
-            # Draw stingray body
+            # Draw shark with tail wag animation
+            tail_wag_x = self.x + self.tail_wag_offset
+            
+            # Draw shark body
             pygame.draw.polygon(screen, (0, 0, 0), [
-                (self.x, self.y + 20),
-                (self.x + 100, self.y + 20),
-                (self.x + 50, self.y)
+                (tail_wag_x, self.y + 20),
+                (tail_wag_x + 100, self.y + 20),
+                (tail_wag_x + 50, self.y)
             ])
             
             # Draw stingray tail
@@ -325,7 +390,7 @@ def game_loop():
     
     # Initialize buttons
     start_button = Button("Start Game", 275, 500, 250, 60)
-    retry_button = Button("Try Again", 275, 600, 250, 60)
+    retry_button = Button("Try Again", 275, 500, 250, 60)
     
     # Game states
     START = 0
@@ -349,12 +414,9 @@ def game_loop():
             
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    if current_state == COUNTDOWN:
-                        # Don't allow jumping during countdown
-                        pass
-                    elif current_state == PLAYING:
+                    if current_state == PLAYING:
                         turtle.jump()
-                    elif current_state == GAME_OVER:
+                    elif current_state == START:
                         current_state = COUNTDOWN
                         countdown_start = time.time()
                         countdown_active = True
@@ -394,13 +456,7 @@ def game_loop():
             obstacle_manager.update_difficulty(score)
             
             # Check collisions
-            if turtle.rect.y >= 520:  # Bottom edge
-                # Save high score
-                name = "Player"
-                high_scores.add_score(score, name)
-                current_state = GAME_OVER
-                continue  # Skip rest of loop
-            elif turtle.rect.y <= 0:  # Top edge
+            if turtle.rect.y <= 0:  # Top edge
                 # Save high score
                 name = "Player"
                 high_scores.add_score(score, name)
@@ -496,20 +552,20 @@ def game_loop():
             font = pygame.font.Font(None, 48)
             
             # Add fun message based on score
-            if score < 50:
-                message = "Better luck next time!"
+            if score < 100:
+                message = "Oops! The jellyfish were faster this time!"
             elif score < 200:
-                message = "You're getting the hang of it!"
+                message = "You're wiggling like a baby octopus!"
             elif score < 500:
-                message = "You're a turtle pro!"
+                message = "Whoa! You're a speedy sea-snail!"
             elif score < 1000:
-                message = "You're swimming like a champ!"
+                message = "You're splashing like a turbo turtle!"
             elif score < 2000:
-                message = "You're a sea legend!"
+                message = "You're zooming like a dolphin on roller skates!"
             elif score < 3000:
-                message = "You're a master of the waves!"
+                message = "You've become King Crabby, ruler of the reef!"
             else:
-                message = "You're the ocean's greatest explorer!"
+                message = "HOLY SEA CUCUMBERS! You're the Ocean Overlord!"
             
             message_text = font.render(message, True, (255, 255, 255))
             text_rect = message_text.get_rect(center=(400, 300))
@@ -526,11 +582,8 @@ def game_loop():
             text_rect = high_score_text.get_rect(center=(400, 450))
             screen.blit(high_score_text, text_rect)
             
-            # Add retry message
-            font = pygame.font.Font(None, 24)
-            retry_text = font.render("Tap to Retry", True, (255, 255, 255))
-            text_rect = retry_text.get_rect(center=(400, 550))
-            screen.blit(retry_text, text_rect)
+            # Draw retry button
+            retry_button.draw(screen)
         
         pygame.display.flip()
         clock.tick(60)
