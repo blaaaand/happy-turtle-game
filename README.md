@@ -46,6 +46,17 @@ The game is built using Pygame and follows a modular structure:
 - `requirements.txt`: List of required Python packages
 - `high_scores.json`: Stores high scores between game sessions
 
+## Music License
+
+The background music used in this game is royalty-free and licensed from Uppbeat:
+
+- Title: Happy Like Larry
+- Artist: Jonny Boyle
+- Source: [Uppbeat](https://uppbeat.io/t/jonny-boyle/happy-like-larry)
+- License code: R98H92SNSNIGXDUA
+
+The music is free for creators and can be used in this game without any restrictions.
+
 ## How to Play
 
 - Tap the screen to make Happy Turtle float up

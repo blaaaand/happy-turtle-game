@@ -94,9 +94,9 @@ class Turtle:
     def __init__(self):
         self.rect = pygame.Rect(100, 300, 50, 50)  # Start in middle of screen
         self.y_speed = 0
-        self.gravity = 0.3  # More floaty gravity for kids
+        self.gravity = 0.2  # Even more floaty gravity for better control
         self.is_alive = True
-        self.jump_height = -6  # More floaty jump
+        self.jump_height = -5  # Slightly reduced jump height for better control
         self.head_x_offset = 0  # For head wiggling animation
         self.head_wiggle_timer = 0
         self.head_wiggle_direction = 1  # 1 for right, -1 for left
@@ -379,6 +379,25 @@ class Button:
     def check_click(self, pos):
         return self.rect.collidepoint(pos)
 
+def wrap_text(text, font, max_width):
+    """Wrap text to fit within a maximum width."""
+    words = text.split()
+    lines = []
+    current_line = words[0]
+    
+    for word in words[1:]:
+        # Test if adding the next word exceeds max width
+        test_line = f"{current_line} {word}"
+        if font.size(test_line)[0] <= max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    
+    lines.append(current_line)  # Add the last line
+    return lines
+
+
 def game_loop():
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
@@ -390,6 +409,49 @@ def game_loop():
     boundary = Boundary(800, 600)
     obstacle_manager = ObstacleManager(800, 600)
     high_scores = HighScores()
+    
+    # Initialize sound effects
+    try:
+        # Initialize mixer with specific settings
+        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+        print("Mixer initialized successfully")
+        
+        # Load the final bubble pop sound
+        try:
+            bubble_sound = pygame.mixer.Sound('sounds/bubble_pop_final.wav')
+            print("Successfully loaded bubble pop sound")
+            bubble_sound.set_volume(0.2)  # Set bubble sound volume to 20%
+            
+        except pygame.error as e:
+            print(f"Error loading bubble pop sound: {str(e)}")
+            bubble_sound = None
+        
+        # Load background music
+        try:
+            music = pygame.mixer.music.load('sounds/happy-like-larry-jonny-boyle-main-version-02-09-5.mp3')
+            print("Successfully loaded background music")
+            pygame.mixer.music.set_volume(0.2)  # Set music volume to 20%
+            pygame.mixer.music.play(-1)  # Loop indefinitely
+            
+        except pygame.error as e:
+            print(f"Error loading background music: {str(e)}")
+            music = None
+    except pygame.error as e:
+        print(f"Error initializing mixer: {str(e)}")
+        bubble_sound = None
+        music = None
+    
+    # Sound effect variables
+    last_bubble_time = 0  # Track last bubble sound time
+    bubble_cooldown = 200  # 200ms cooldown between bubble sounds
+    
+    # Add debug print to show sound state
+    print(f"Final sound state: {'loaded' if bubble_sound else 'not loaded'}")
+    print(f"Music state: {'playing' if music else 'not playing'}")
+    
+    # Sound effect variables
+    last_bubble_time = 0  # Track last bubble sound time
+    bubble_cooldown = 100  # 100ms cooldown between bubble sounds
     
     # Initialize buttons
     start_button = Button("Start Game", 275, 500, 250, 60)
@@ -428,6 +490,16 @@ def game_loop():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     if current_state == PLAYING:
+                        # Play bubble sound when jumping (with cooldown)
+                        current_time = pygame.time.get_ticks()
+                        if current_time - last_bubble_time > bubble_cooldown:
+                            if bubble_sound:
+                                try:
+                                    bubble_sound.play()
+                                    print("Bubble sound played")
+                                except pygame.error as e:
+                                    print(f"Error playing sound: {str(e)}")
+                            last_bubble_time = current_time
                         turtle.jump()
                     elif current_state == START:
                         current_state = COUNTDOWN
@@ -450,6 +522,16 @@ def game_loop():
                     # Don't allow jumping during countdown
                     pass
                 elif current_state == PLAYING:
+                    # Play bubble sound when jumping (with cooldown)
+                    current_time = pygame.time.get_ticks()
+                    if current_time - last_bubble_time > bubble_cooldown:
+                        if bubble_sound:
+                            try:
+                                bubble_sound.play()
+                                print("Bubble sound played")
+                            except pygame.error as e:
+                                print(f"Error playing sound: {str(e)}")
+                        last_bubble_time = current_time
                     turtle.jump()
                 elif current_state == GAME_OVER:
                     if retry_button.check_click(event.pos):
@@ -595,9 +677,15 @@ def game_loop():
             else:
                 message = "HOLY SEA CUCUMBERS! You're the Ocean Overlord!"
             
-            message_text = font.render(message, True, (255, 255, 255))
-            text_rect = message_text.get_rect(center=(400, 300))
-            screen.blit(message_text, text_rect)
+            # Wrap the message to fit the screen
+            wrapped_lines = wrap_text(message, font, 600)  # 600 pixels max width
+            y_offset = 300 - (len(wrapped_lines) * 30) // 2  # Center vertically
+            
+            # Draw each line of the wrapped message
+            for i, line in enumerate(wrapped_lines):
+                line_text = font.render(line, True, (255, 255, 255))
+                text_rect = line_text.get_rect(center=(400, y_offset + (i * 30)))
+                screen.blit(line_text, text_rect)
             
             # Show score
             score_text = font.render(f"Score: {score}", True, (255, 255, 255))
