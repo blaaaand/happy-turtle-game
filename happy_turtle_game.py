@@ -105,13 +105,13 @@ class Turtle:
         self.y_speed += self.gravity
         self.rect.y += self.y_speed
         
-        # Update head wiggle animation
+        # Update head wiggle animation (more subtle)
         if self.y_speed < 0:  # Only wiggle when jumping
             self.head_wiggle_timer += 1
-            if self.head_wiggle_timer >= 10:  # Change direction every 10 frames
+            if self.head_wiggle_timer >= 15:  # Change direction every 15 frames (slower)
                 self.head_wiggle_direction *= -1
                 self.head_wiggle_timer = 0
-            self.head_x_offset = self.head_wiggle_direction * 2  # Small wiggle offset
+            self.head_x_offset = self.head_wiggle_direction * 1  # Smaller wiggle offset (1 pixel)
         else:
             self.head_x_offset = 0  # Reset when not jumping
             self.head_wiggle_timer = 0
@@ -408,6 +408,16 @@ def game_loop():
     countdown_start = 0  # Initialize with 0, will be set when countdown starts
     countdown_active = False  # Track if countdown is active
     
+    # Home screen turtle animation variables
+    home_turtle_bob_timer = 0
+    home_turtle_bob_direction = 1  # 1 for up, -1 for down
+    home_turtle_bob_offset = 0
+    home_turtle_head_wiggle_timer = 0
+    home_turtle_head_wiggle_direction = 1
+    home_turtle_head_wiggle_offset = 0
+    
+
+    
     while running:
         # Handle events
         for event in pygame.event.get():
@@ -496,19 +506,34 @@ def game_loop():
             title_rect = title_text.get_rect(center=(400, 150))
             screen.blit(title_text, title_rect)
             
-            # Draw turtle
-            turtle_start_rect = pygame.Rect(350, 250, 50, 50)
-            # Draw head
-            pygame.draw.circle(screen, (0, 255, 0), (turtle_start_rect.x + 62, turtle_start_rect.y + 5), 10)
-            pygame.draw.circle(screen, (255, 255, 255), (turtle_start_rect.x + 62, turtle_start_rect.y + 5), 3)
-            pygame.draw.circle(screen, (0, 0, 0), (turtle_start_rect.x + 62, turtle_start_rect.y + 5), 1)
+            # Update home screen turtle animations (more subtle)
+            home_turtle_bob_timer += 1
+            if home_turtle_bob_timer >= 20:  # Slower bobbing (every 20 frames instead of 10)
+                home_turtle_bob_direction *= -1
+                home_turtle_bob_timer = 0
+            home_turtle_bob_offset = home_turtle_bob_direction * 1  # Smaller bobbing (1 pixel instead of 2)
             
-            # Draw shell
-            pygame.draw.ellipse(screen, (100, 60, 0), (turtle_start_rect.x - 5, turtle_start_rect.y - 15, 60, 30))
+            home_turtle_head_wiggle_timer += 1
+            if home_turtle_head_wiggle_timer >= 16:  # Slower head wiggling (every 16 frames instead of 8)
+                home_turtle_head_wiggle_direction *= -1
+                home_turtle_head_wiggle_timer = 0
+            home_turtle_head_wiggle_offset = home_turtle_head_wiggle_direction * 1  # Smaller head wiggling (1 pixel instead of 2)
             
-            # Draw legs
-            pygame.draw.circle(screen, (0, 255, 0), (turtle_start_rect.x + 10, turtle_start_rect.y + 15), 6)
-            pygame.draw.circle(screen, (0, 255, 0), (turtle_start_rect.x + 40, turtle_start_rect.y + 15), 6)
+            # Draw turtle with animations
+            turtle_start_rect = pygame.Rect(325, 250 + home_turtle_bob_offset, 50, 30)
+            
+            # Draw head with wiggle
+            head_x = turtle_start_rect.x + 62 + home_turtle_head_wiggle_offset
+            pygame.draw.circle(screen, (0, 255, 0), (head_x, turtle_start_rect.y + 5), 10)
+            pygame.draw.circle(screen, (255, 255, 255), (head_x, turtle_start_rect.y + 5), 3)
+            pygame.draw.circle(screen, (0, 0, 0), (head_x, turtle_start_rect.y + 5), 1)
+            
+            # Draw shell with bobbing
+            pygame.draw.ellipse(screen, (100, 60, 0), (turtle_start_rect.x - 5, turtle_start_rect.y - 15 + home_turtle_bob_offset, 60, 30))
+            
+            # Draw legs with bobbing
+            pygame.draw.circle(screen, (0, 255, 0), (turtle_start_rect.x + 10, turtle_start_rect.y + 15 + home_turtle_bob_offset), 6)
+            pygame.draw.circle(screen, (0, 255, 0), (turtle_start_rect.x + 40, turtle_start_rect.y + 15 + home_turtle_bob_offset), 6)
             
             # Draw instructions
             font = pygame.font.Font(None, 36)
